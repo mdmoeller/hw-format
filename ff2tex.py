@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 import sys
 import re
+import json
 
 input_file = None
 
@@ -17,7 +18,7 @@ match = re.search(questions_pattern, lines)
 
 if match:
     text = match.group(1)
-    print('initial text: ', text)
+    # print('initial text: ', text)
 else:
     print("Could not find question text in input")
     sys.exit(1)
@@ -31,29 +32,37 @@ bold_tex = r"\\textbf{\1}"
 bullet_pattern = '^[ ]*(?:\[|\().(?:\)|\])(.*)'
 bullet_tex = r'\\item \1'
 
-text = re.sub('&quot;', '\n', text)
-text = re.sub(r'\$\$','$', text)
-text = re.sub(emph_pattern, emph_tex, text)
-text = re.sub(bold_pattern, bold_tex, text)
+# Replace single and double quotes
+text = re.sub(r'&quot;', '"', text)
+text = re.sub(r'&#39;', "'", text)
 
-print('\n\n\n\nimproved text: ', text)
-sys.exit(0)
+j = json.loads(text)
 
-question = []
-choices = []
-for line in output:
-    if re.match(bullet_pattern, line):
-        choices.append(re.sub(bullet_pattern, bullet_tex, line))
-    else:
-        question.append(line)
+print('\n\n\njson dump:')
+json.dump(j, sys.stdout, indent=4)
 
-print('\nIn TeX:\n')
+def basic_texify(text):
+    text = re.sub(r'\$\$','$', text)
+    text = re.sub(emph_pattern, emph_tex, text)
+    text = re.sub(bold_pattern, bold_tex, text)
+    return text
 
-for line in question:
-    print(line, end='')
+def question_to_tex(q):
+    if q:
+        prompt = q[0]['value']
+        print(basic_texify(prompt))
 
-if choices:
-    print('\\begin{enumerate}')
-    for choice in choices:
-        print(choice, end='')
-    print('\\end{enumerate}')
+    if q[1:] and 'choices' in q[1]:
+        choices = q[1]['choices']
+        print('\t\\begin{enumerate}')
+        for c in choices:
+            print('\t\\item ', basic_texify(c['value']))
+        print('\t\\end{enumerate}')
+
+print('-----------------------------\nTeX:\n\n\n')
+print('\\begin{enumerate}')
+for qid in j['questions']:
+    print('\\item ', end='')
+    q = j['questions'][qid]['content']
+    question_to_tex(q)
+print('\\end{enumerate}')
