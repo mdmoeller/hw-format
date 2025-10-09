@@ -61,8 +61,22 @@ def question_to_tex(q):
 
 print('-----------------------------\nTeX:\n\n\n')
 print('\\begin{enumerate}')
-for qid in j['questions']:
+
+# TODO clean up this line
+root_questions = sorted(filter(lambda qid: j['questions'][qid]['parent_id'] == None, j['questions']), key = lambda qid: j['questions'][qid]['index'])
+
+for qid in root_questions:
+    # Print the root question
     print('\\item ', end='')
     q = j['questions'][qid]['content']
     question_to_tex(q)
+
+    # Find and print subquestions
+    sub_questions = sorted(filter(lambda cid: j['questions'][cid]['parent_id'] == int(qid), j['questions']), key = lambda cid: j['questions'][cid]['index'])
+    print('    \\begin{enumerate}')
+    for cid in sub_questions:
+        print('    \\item ', end='')
+        q = j['questions'][cid]['content']
+        question_to_tex(q)
+    print('    \\end{enumerate}')
 print('\\end{enumerate}')
